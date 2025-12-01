@@ -4,7 +4,7 @@ function report_error(e) { if (_exit_code) exit _exit_code
 # True brute force approach...
 function moveby(n, i) {
     if (DEBUG > 1) {
-        print "Moving dial left by", n, "from", DIAL
+        print "Moving dial by", i * n, "from", DIAL
     }
     while (n > 0) {
         --n
