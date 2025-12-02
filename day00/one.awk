@@ -3,6 +3,7 @@ function report_error(e) { if (_exit_code) exit _exit_code
                            if (e) { print e; exit _exit_code=1 } }
 BEGIN {
     DEBUG = 0
+    DFILE = "/dev/stderr"
 }
 END {
     report_error()
