@@ -22,25 +22,19 @@ $0 !~ /^[[:digit:]]+,[[:digit:]]+,[[:digit:]]+$/ {
     Z[NR] = $3
     CIRCUIT[NR] = NR
     JUNCTIONS[NR][NR] = 1
+    for (i = 1; i < NR; ++i) {
+        DISTANCES[i,NR] = straight_line_distance(i,NR)
+    }
 }
 END {
     report_error()
-    split("", distances)
-    for (a = 1; a < NR; ++a) {
-        for (b = a + 1; b <= NR; ++b) {
-            distances[a,b] = straight_line_distance(a,b)
-        }
-    }
-    if (DEBUG > 1) {
-        print length(distances), "distances calculated" > DFILE
-    }
     circuits_to_create = (NR < 100) ? 10 : 1000
-    for (pair in distances) if (circuits_to_create-- > 0) {
+    for (pair in DISTANCES) if (circuits_to_create-- > 0) {
         split(pair, p, SUBSEP)
         a = p[1]
         b = p[2]
         if (DEBUG) {
-            print distances[pair], "from (" X[a] "," Y[a] "," Z[a] ") to (" X[b] "," Y[b] "," Z[b] ")" > DFILE
+            print DISTANCES[pair], "from (" X[a] "," Y[a] "," Z[a] ") to (" X[b] "," Y[b] "," Z[b] ")" > DFILE
         }
         merge_to = CIRCUIT[a]
         merge_from = CIRCUIT[b]
