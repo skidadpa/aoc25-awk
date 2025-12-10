@@ -283,27 +283,22 @@ END {
         if (DEBUG > 1) {
             print "checking for intersections of (" minx "," miny "," maxx "," maxy "), AREA = " AREA[box] > DFILE
         }
-        for (x = minx + 1; x < maxx; ++x) {
-            if (x in VERTICAL_EDGES) {
-                for (edge = 1; edge <= VERTICAL_EDGES[x]; ++edge) {
-                    if (DEBUG > 2) {
-                        print "  potential intersection of (" minx "," miny "," maxx "," maxy ") at x = " x > DFILE
-                    }
-                    # The third check probably isn't necessary since another edge will cut the line
-                    intersected = ((TOP[x][edge] <= miny) && (BOTTOM[x][edge] > miny)) || \
-                                  ((TOP[x][edge] < maxy) && (BOTTOM[x][edge] >= maxy)) || \
-                                  ((TOP[x][edge] >= miny) && (BOTTOM[x][edge] <= miny))
-                    if (intersected) {
-                        if (DEBUG > 1) {
-                            print "   edge at " TOP[x][edge] " to " BOTTOM[x][edge] " INTERSECTS" > DFILE
-                        }
-                        break
-                    } else if (DEBUG > 2) {
-                        print "   edge at " TOP[x][edge] " to " BOTTOM[x][edge] " does not intersect" > DFILE
-                    }
+        for (x in VERTICAL_EDGES) if ((0 + x > minx) && (0 + x < maxx)) {
+            for (edge = 1; edge <= VERTICAL_EDGES[x]; ++edge) {
+                if (DEBUG > 2) {
+                    print "  potential intersection of (" minx "," miny "," maxx "," maxy ") at x = " x > DFILE
                 }
+                # The third check probably isn't necessary since another edge will cut the line
+                intersected = ((TOP[x][edge] <= miny) && (BOTTOM[x][edge] > miny)) || \
+                              ((TOP[x][edge] < maxy) && (BOTTOM[x][edge] >= maxy)) || \
+                              ((TOP[x][edge] >= miny) && (BOTTOM[x][edge] <= miny))
                 if (intersected) {
+                    if (DEBUG > 1) {
+                        print "   edge at " TOP[x][edge] " to " BOTTOM[x][edge] " INTERSECTS" > DFILE
+                    }
                     break
+                } else if (DEBUG > 2) {
+                    print "   edge at " TOP[x][edge] " to " BOTTOM[x][edge] " does not intersect" > DFILE
                 }
             }
             if (intersected) {
@@ -313,27 +308,22 @@ END {
         if (intersected) {
             continue
         }
-        for (y = miny + 1; y < maxy; ++y) {
-            if (y in HORIZONTAL_EDGES) {
-                for (edge = 1; edge <= HORIZONTAL_EDGES[y]; ++edge) {
-                    if (DEBUG > 2) {
-                        print "  potential intersection of (" minx "," miny "," maxx "," maxy ") at y = " y > DFILE
-                    }
-                    # The third check probably isn't necessary since another edge will cut the line
-                    intersected = ((LEFT[y][edge] <= minx) && (RIGHT[y][edge] > minx)) || \
-                                  ((LEFT[y][edge] < maxx) && (RIGHT[y][edge] >= maxx)) || \
-                                  ((LEFT[y][edge] >= minx) && (RIGHT[y][edge] <= minx))
-                    if (intersected) {
-                        if (DEBUG > 1) {
-                            print "   edge at " LEFT[y][edge] " to " RIGHT[y][edge] " INTERSECTS" > DFILE
-                        }
-                        break
-                    } else if (DEBUG > 2) {
-                        print "   edge at " LEFT[y][edge] " to " RIGHT[y][edge] " does not intersect" > DFILE
-                    }
+        for (y in HORIZONTAL_EDGES) if ((0 + y > miny) && (0 + y < maxy)) {
+            for (edge = 1; edge <= HORIZONTAL_EDGES[y]; ++edge) {
+                if (DEBUG > 2) {
+                    print "  potential intersection of (" minx "," miny "," maxx "," maxy ") at y = " y > DFILE
                 }
+                # The third check probably isn't necessary since another edge will cut the line
+                intersected = ((LEFT[y][edge] <= minx) && (RIGHT[y][edge] > minx)) || \
+                              ((LEFT[y][edge] < maxx) && (RIGHT[y][edge] >= maxx)) || \
+                              ((LEFT[y][edge] >= minx) && (RIGHT[y][edge] <= minx))
                 if (intersected) {
+                    if (DEBUG > 1) {
+                        print "   edge at " LEFT[y][edge] " to " RIGHT[y][edge] " INTERSECTS" > DFILE
+                    }
                     break
+                } else if (DEBUG > 2) {
+                    print "   edge at " LEFT[y][edge] " to " RIGHT[y][edge] " does not intersect" > DFILE
                 }
             }
             if (intersected) {
