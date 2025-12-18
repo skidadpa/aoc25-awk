@@ -1,0 +1,63 @@
+#!/usr/bin/env gawk -f
+function report_error(e) { if (_exit_code) exit _exit_code
+                           if (e) { print e; exit _exit_code=1 } }
+BEGIN {
+    DEBUG = 6
+    DFILE = "/dev/stderr"
+    FPAT = "([[][.#]+])|([(][[:digit:]]+(,[[:digit:]]+)*[)])|([{][[:digit:]]+(,[[:digit:]]+)*[}])"
+    MAX_TOTAL_PRESSES = 1000
+    SUM = 0
+}
+$0 !~ /^\[[.#]+\]( [(][[:digit:]]+(,[[:digit:]]+)*[)])+ [{][[:digit:]]+(,[[:digit:]]+)*[}]$/ {
+    report_error("DATA ERROR at line " NR ": " $0)
+}
+{
+    target = substr($NF,2,length($NF)-2)
+
+    split("", BUTTONS)
+    split("", COMBINATIONS)
+    next_mask = 1
+    for (i = 2; i < NF; ++i) {
+        split(substr($i,2,length($i)-2), current_button, ",")
+        value = 0
+        for (m in current_button) {
+            value += lshift(1,current_button[m])
+        }
+        BUTTONS[value] = $i
+        split("", NEW_COMBINATIONS)
+        NEW_COMBINATIONS[value] = value
+        for (c in COMBINATIONS) {
+            NEW_COMBINATIONS[c "," value] = xor(COMBINATIONS[c], value)
+        }
+        for (c in NEW_COMBINATIONS) {
+            COMBINATIONS[c] = NEW_COMBINATIONS[c]
+        }
+    }
+
+    split("", PARITIES)
+    for (c in COMBINATIONS) {
+        PARITIES[COMBINATIONS[c]][c] = 1
+    }
+
+    zeroes = gensub(/[[:digit:]]+/, "0", "g", target)
+
+    if (DEBUG) {
+        printf "%d: start: (%s) target: (%s) buttons:", NR, zeroes, target > DFILE
+        for (b in BUTTONS) {
+            printf " %03X%s", b, BUTTONS[b] > DFILE
+        }
+        printf "\n" > DFILE
+        print "PARITIES:" > DFILE
+        for (p in PARITIES) {
+            printf " %03X (%d):", p, length(PARITIES[p]) > DFILE
+            for (c in PARITIES[p]) {
+                printf " %s", c > DFILE
+            }
+            printf "\n" > DFILE
+        }
+    }
+}
+END {
+    report_error()
+    print SUM
+}
