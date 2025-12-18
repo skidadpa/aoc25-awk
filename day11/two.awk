@@ -1,51 +1,48 @@
 #!/usr/bin/env gawk -f
 function report_error(e) { if (_exit_code) exit _exit_code
                            if (e) { print e; exit _exit_code=1 } }
-function find_paths(path, dest,   route_end, ROUTES, o) {
+function find_paths(path, dst,   route_end, ROUTES, o) {
     if (path in PATHS) {
         return
     }
     PATHS[path] = 1
     route_end = split(path, ROUTE, ",")
-    # split("", IN_ROUTE)
-    # for (r in ROUTE) {
-    #     IN_ROUTE[ROUTE[r]] = 1
-    # }
-    if (ROUTE[route_end] == dest) {
-        if (DEBUG > 1) {
-            print path > DFILE
-        }
+    if (ROUTE[route_end] == dst) {
         ++PATHS_TO_DEST
+        if (DEBUG > 1) {
+            if (PATHS_TO_DEST % 1000000 == 0) {
+                print PATHS_TO_DEST, "paths to", dst, "found" > DFILE
+            }
+            if (DEBUG > 4) {
+                print path > DFILE
+            }
+        }
     }
-    if (ROUTE[route_end] in STOP_AT) {
-        return
-    }
-    for (o in OUTPUTS[ROUTE[route_end]]) {
-        # if (o in IN_ROUTE) {
-        #     report_error("PROGRAM ERROR: loop discovered")
-        # }
-        find_paths(path "," o, dest)
+    for (o in FILTERED_OUTPUTS[ROUTE[route_end]]) {
+        find_paths(path "," o, dst)
     }
 }
-function count_paths(start, dest,   k) {
+function count_paths(src, dst,   k) {
     split("", PATHS)
-    split("", STOP_AT)
-    for (k in KEY_NODES) {
-        if (k != start) {
-            STOP_AT[k] = 1
+    PATHS_TO_DEST = 0
+
+    split("", FILTERED_OUTPUTS)
+    for (n in OVERLAPPING_NODES[src "," dst]) {
+        for (o in OUTPUTS[n]) {
+            if (o in OVERLAPPING_NODES[src "," dst]) {
+                FILTERED_OUTPUTS[n][o] = 1
+            }
         }
     }
-    PATHS_TO_DEST = 0
-    find_paths(start, dest)
+    find_paths(src, dst)
     if (DEBUG) {
-        print PATHS_TO_DEST, "paths from", start, "to", dest > DFILE
+        print PATHS_TO_DEST, "paths from", src, "to", dst > DFILE
     }
     return PATHS_TO_DEST
 }
 BEGIN {
-    DEBUG = 2
+    DEBUG = 0
     DFILE = "/dev/stderr"
-    # DFILE = "debug.out"
     FPAT = "[a-z]{3}"
 }
 $0 !~ /^[a-z]{3}:( [a-z]{3})+$/ {
@@ -78,14 +75,8 @@ END {
             printf "\n" > DFILE
         }
     }
-    split("", KEY_NODES)
-    KEY_NODES["svr"] = KEY_NODES["dac"] = KEY_NODES["fft"] = KEY_NODES["out"] = 1
-    # print count_paths("dac", "fft")
-    # print count_paths("fft", "dac")
-    # print count_paths("svr", "dac") * count_paths("dac", "fft") * count_paths("fft", "out") + \
-    #       count_paths("svr", "fft") * count_paths("fft", "dac") * count_paths("dac", "out")
-    split("dac fft svr dac svr", SRCS)
-    split("fft dac fft out out", DSTS)
+    split("svr svr dac fft fft dac", SRCS)
+    split("dac fft fft dac out out", DSTS)
     for (s in SRCS) {
         src = SRCS[s]
         dst = DSTS[s]
@@ -93,7 +84,7 @@ END {
         split("", OUTPUT_TREE_NODES)
         round = 0
         while (++round in TO_CHECK) {
-            if (DEBUG > 1) {
+            if (DEBUG > 4) {
                 printf ".", round > DFILE
             }
             for (n in TO_CHECK[round]) {
@@ -107,14 +98,14 @@ END {
             }
             delete TO_CHECK[round]
         }
-        if (DEBUG > 1) {
+        if (DEBUG > 4) {
             printf "\n" > DFILE
         }
         TO_CHECK[1][dst] = 1
         split("", INPUT_TREE_NODES)
         round = 0
         while (++round in TO_CHECK) {
-            if (DEBUG > 1) {
+            if (DEBUG > 4) {
                 printf ".", round > DFILE
             }
             for (n in TO_CHECK[round]) {
@@ -128,7 +119,7 @@ END {
             }
             delete TO_CHECK[round]
         }
-        if (DEBUG > 1) {
+        if (DEBUG > 4) {
             printf "\n" > DFILE
         }
         split("", OVERLAPPING_NODES[src "," dst])
@@ -136,32 +127,19 @@ END {
             OVERLAPPING_NODES[src "," dst][n] = 1
         }
         if (DEBUG) {
-            print "from", src, "to", dst > DFILE
-            print "output tree size:", length(OUTPUT_TREE_NODES) > DFILE
-            print "input tree size:", length(INPUT_TREE_NODES) > DFILE
-            print "overlapping nodes:", length(OVERLAPPING_NODES[src "," dst]) > DFILE
-            if (src in INPUT_TREE_NODES) {
-                print src, "in input tree" > DFILE
-            }
-            if (dst in OUTPUT_TREE_NODES) {
-                print dst, "in output tree" > DFILE
-            }
+            print length(OVERLAPPING_NODES[src "," dst]), "nodes from", src, "to", dst > DFILE
         }
     }
-    split("svr,fft fft,dac svr,fft:fft,dac svr,fft", SRCS)
-    split("fft,dac dac,out dac,out fft,dac:dac,out", DSTS)
-    for (i in SRCS) {
-        src = SRCS[i]
-        dst = DSTS[i]
-        for (n in OVERLAPPING_NODES[src]) if (n in OVERLAPPING_NODES[dst]) {
-            OVERLAPPING_NODES[src ":" dst][n] = 1
+    if (length(OVERLAPPING_NODES["dac,fft"]) > 1) {
+        split("svr dac fft out", ENDPOINTS)
+        if (length(OVERLAPPING_NODES["fft,dac"]) > 1) {
+            report_error("PROGRAM ERROR: loop between fft and dac nodes")
         }
-        if (DEBUG) {
-            print "from", src, "to", dst > DFILE
-            print "overlapping nodes:", length(OVERLAPPING_NODES[src ":" dst]) > DFILE
-            for (o in OVERLAPPING_NODES[src ":" dst]) {
-                print " ", o > DFILE
-            }
+    } else {
+        split("svr fft dac out", ENDPOINTS)
+        if (length(OVERLAPPING_NODES["fft,dac"]) < 1) {
+            report_error("PROGRAM ERROR: no connection between fft and dac nodes")
         }
     }
+    print count_paths(ENDPOINTS[1],ENDPOINTS[2]) * count_paths(ENDPOINTS[2],ENDPOINTS[3]) * count_paths(ENDPOINTS[3],ENDPOINTS[4])
 }
